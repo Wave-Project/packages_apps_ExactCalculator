@@ -21,13 +21,13 @@
     <color name="calculator_accent_color">@*android:color/accent_device_default</color>
 
     <!-- Primary color (Color for the toolbars). -->
-    <color name="calculator_primary_color">#fafafa</color>
+    <color name="calculator_primary_color">#ffffff</color>
 
     <!-- Status bar color. -->
-    <color name="calculator_statusbar_color">#f0f0f0</color>
+    <color name="calculator_statusbar_color">#ffffff</color>
 
     <!-- Color to indicate an error has occured. -->
-    <color name="calculator_error_color">#d0422d</color>
+    <color name="calculator_error_color">#db4437</color>
 
     <!-- Background color of the calculator display. -->
     <color name="display_background_color">@color/calculator_primary_color</color>

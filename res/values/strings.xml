@@ -314,5 +314,7 @@
     <string name="title_current_expression">Current Expression</string>
     <!-- Placeholder string when there is no history to be shown. [CHAR_LIMIT=40] -->
     <string name="no_history">No History</string>
+    <string name="digit_double0" translatable="false">00</string>
+    <string name="op_clr" translatable="false">C</string>
 
 </resources>

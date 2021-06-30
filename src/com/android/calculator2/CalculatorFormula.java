@@ -30,7 +30,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ActionMode;
-import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -57,7 +56,6 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
     private int mWidthConstraint = -1;
     private ActionMode mActionMode;
     private ActionMode.Callback mPasteActionModeCallback;
-    private ContextMenu mContextMenu;
     private OnTextSizeChangeListener mOnTextSizeChangeListener;
     private OnFormulaContextMenuClickListener mOnContextMenuClickListener;
     private Calculator.OnDisplayMemoryOperationsListener mOnDisplayMemoryOperationsListener;
@@ -85,11 +83,7 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
                 (mMaximumTextSize - mMinimumTextSize) / 3);
         a.recycle();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            setupActionMode();
-        } else {
-            setupContextMenu();
-        }
+        setupActionMode();
     }
 
     @Override
@@ -158,10 +152,6 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
         return mMinimumTextSize;
     }
 
-    public float getMaximumTextSize() {
-        return mMaximumTextSize;
-    }
-
     public float getVariableTextSize(CharSequence text) {
         if (mWidthConstraint < 0 || mMaximumTextSize <= mMinimumTextSize) {
             // Not measured, bail early.
@@ -217,10 +207,6 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
     public boolean stopActionModeOrContextMenu() {
         if (mActionMode != null) {
             mActionMode.finish();
-            return true;
-        }
-        if (mContextMenu != null) {
-            mContextMenu.close();
             return true;
         }
         return false;
@@ -283,36 +269,9 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
                 outRect.left = (int) (outRect.right * 0.9f);
             }
         };
-        setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                mActionMode = startActionMode(mPasteActionModeCallback, ActionMode.TYPE_FLOATING);
-                return true;
-            }
-        });
-    }
-
-    /**
-     * Use ContextMenu for paste support on L and lower.
-     */
-    private void setupContextMenu() {
-        setOnCreateContextMenuListener(new OnCreateContextMenuListener() {
-            @Override
-            public void onCreateContextMenu(ContextMenu contextMenu, View view,
-                    ContextMenu.ContextMenuInfo contextMenuInfo) {
-                final MenuInflater inflater = new MenuInflater(getContext());
-                createContextMenu(inflater, contextMenu);
-                mContextMenu = contextMenu;
-                for (int i = 0; i < contextMenu.size(); i++) {
-                    contextMenu.getItem(i).setOnMenuItemClickListener(CalculatorFormula.this);
-                }
-            }
-        });
-        setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                return showContextMenu();
-            }
+        setOnLongClickListener(v -> {
+            mActionMode = startActionMode(mPasteActionModeCallback, ActionMode.TYPE_FLOATING);
+            return true;
         });
     }
 
@@ -341,16 +300,15 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.memory_recall:
-                mOnContextMenuClickListener.onMemoryRecall();
-                return true;
-            case R.id.menu_paste:
-                paste();
-                return true;
-            default:
-                return false;
+        int itemId = item.getItemId();
+        if (itemId == R.id.memory_recall) {
+            mOnContextMenuClickListener.onMemoryRecall();
+            return true;
+        } else if (itemId == R.id.menu_paste) {
+            paste();
+            return true;
         }
+        return false;
     }
 
     @Override
@@ -387,6 +345,7 @@ public class CalculatorFormula extends AlignedTextView implements MenuItem.OnMen
 
     public interface OnFormulaContextMenuClickListener {
         boolean onPaste(ClipData clip);
+
         void onMemoryRecall();
     }
 }

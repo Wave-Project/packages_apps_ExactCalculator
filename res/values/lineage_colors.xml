@@ -17,5 +17,8 @@
 
 <resources>
     <color name="navigationBar_color">@android:color/white</color>
-    <color name="navigationBar_divider">#1f000000</color>
+
+    <color name="history_divider_color">#14000000</color>
+    <color name="history_clear_icon_color">#d8000000</color>
+    <color name="history_clear_icon_disabled_color">#2d000000</color>
 </resources>

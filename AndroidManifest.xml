@@ -15,8 +15,7 @@
   limitations under the License.
   -->
 
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.android.calculator2">
 
     <application
@@ -32,8 +31,8 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.Calculator">
             <layout
-                android:minHeight="220dp"
-                android:minWidth="230dp" />
+                android:minWidth="230dp"
+                android:minHeight="220dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -41,12 +40,5 @@
                 <category android:name="android.intent.category.APP_CALCULATOR" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".Licenses"
-            android:launchMode="singleTop"
-            android:parentActivityName=".Calculator"
-            android:theme="@style/Theme.Licenses" />
-
     </application>
 </manifest>

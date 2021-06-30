@@ -18,14 +18,18 @@ package com.android.calculator2;
 
 import android.content.Context;
 import android.graphics.Color;
-import androidx.viewpager.widget.PagerAdapter;
-import androidx.viewpager.widget.ViewPager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
+import java.util.Objects;
 
 public class CalculatorPadViewPager extends ViewPager {
 
@@ -36,34 +40,23 @@ public class CalculatorPadViewPager extends ViewPager {
         }
 
         @Override
-        public View instantiateItem(ViewGroup container, final int position) {
+        public View instantiateItem(@NonNull ViewGroup container, final int position) {
             final View child = getChildAt(position);
 
             // Set a OnClickListener to scroll to item's position when it isn't the current item.
-            child.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    setCurrentItem(position, true /* smoothScroll */);
-                }
-            });
+            child.setOnClickListener(v -> setCurrentItem(position, true /* smoothScroll */));
             // Set an OnTouchListener to always return true for onTouch events so that a touch
             // sequence cannot pass through the item to the item below.
-            child.setOnTouchListener(new OnTouchListener() {
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    v.onTouchEvent(event);
-                    return true;
-                }
+            child.setOnTouchListener((v, event) -> {
+                v.onTouchEvent(event);
+                return true;
             });
 
             // Set an OnHoverListener to always return true for onHover events so that focus cannot
             // pass through the item to the item below.
-            child.setOnHoverListener(new OnHoverListener() {
-                @Override
-                public boolean onHover(View v, MotionEvent event) {
-                    v.onHoverEvent(event);
-                    return true;
-                }
+            child.setOnHoverListener((v, event) -> {
+                v.onHoverEvent(event);
+                return true;
             });
             // Make the item focusable so it can be selected via a11y.
             child.setFocusable(true);
@@ -74,12 +67,12 @@ public class CalculatorPadViewPager extends ViewPager {
         }
 
         @Override
-        public void destroyItem(ViewGroup container, int position, Object object) {
+        public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
             removeViewAt(position);
         }
 
         @Override
-        public boolean isViewFromObject(View view, Object object) {
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
             return view == object;
         }
 
@@ -119,43 +112,37 @@ public class CalculatorPadViewPager extends ViewPager {
         }
     };
 
-    private final PageTransformer mPageTransformer = new PageTransformer() {
-        @Override
-        public void transformPage(View view, float position) {
-            if (position < 0.0f) {
-                // Pin the left page to the left side.
-                view.setTranslationX(getWidth() * -position);
-                view.setAlpha(Math.max(1.0f + position, 0.0f));
-            } else {
-                // Use the default slide transition when moving to the next page.
-                view.setTranslationX(0.0f);
-                view.setAlpha(1.0f);
-            }
+    private final PageTransformer mPageTransformer = (view, position) -> {
+        if (position < 0.0f) {
+            // Pin the left page to the left side.
+            view.setTranslationX(getWidth() * -position);
+            view.setAlpha(Math.max(1.0f + position, 0.0f));
+        } else {
+            // Use the default slide transition when moving to the next page.
+            view.setTranslationX(0.0f);
+            view.setAlpha(1.0f);
         }
     };
-
+    private final GestureDetector mGestureDetector;
+    private int mClickedItemIndex = -1;
     private final GestureDetector.SimpleOnGestureListener mGestureWatcher =
             new GestureDetector.SimpleOnGestureListener() {
-        @Override
-        public boolean onDown(MotionEvent e) {
-            // Return true so calls to onSingleTapUp are not blocked.
-            return true;
-        }
+                @Override
+                public boolean onDown(MotionEvent e) {
+                    // Return true so calls to onSingleTapUp are not blocked.
+                    return true;
+                }
 
-        @Override
-        public boolean onSingleTapUp(MotionEvent ev) {
-            if (mClickedItemIndex != -1) {
-                getChildAt(mClickedItemIndex).performClick();
-                mClickedItemIndex = -1;
-                return true;
-            }
-            return super.onSingleTapUp(ev);
-        }
-    };
-
-    private final GestureDetector mGestureDetector;
-
-    private int mClickedItemIndex = -1;
+                @Override
+                public boolean onSingleTapUp(MotionEvent ev) {
+                    if (mClickedItemIndex != -1) {
+                        getChildAt(mClickedItemIndex).performClick();
+                        mClickedItemIndex = -1;
+                        return true;
+                    }
+                    return super.onSingleTapUp(ev);
+                }
+            };
 
     public CalculatorPadViewPager(Context context) {
         this(context, null /* attrs */);
@@ -179,7 +166,7 @@ public class CalculatorPadViewPager extends ViewPager {
         super.onFinishInflate();
 
         // Invalidate the adapter's data set since children may have been added during inflation.
-        getAdapter().notifyDataSetChanged();
+        Objects.requireNonNull(getAdapter()).notifyDataSetChanged();
 
         // Let page change listener know about our initial position.
         mOnPageChangeListener.onPageSelected(getCurrentItem());

@@ -17,16 +17,15 @@
 package com.android.calculator2;
 
 import android.animation.ArgbEvaluator;
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * Contains the logic for animating the recyclerview elements on drag.
  */
 public final class DragController {
-
-    private static final String TAG = "DragController";
 
     private static final ArgbEvaluator mColorEvaluator = new ArgbEvaluator();
 
@@ -178,10 +177,8 @@ public final class DragController {
                     recyclerView.getChildViewHolder(recyclerView.getChildAt(i));
             if (vh2 != null) {
                 final View view = vh2.itemView;
-                if (view != null) {
-                    view.setTranslationY(
+                view.setTranslationY(
                         mAnimationController.getHistoryElementTranslationY(yFraction));
-                }
             }
         }
     }
@@ -254,12 +251,12 @@ public final class DragController {
         }
 
         public void initializeFormulaTranslationY(AlignedTextView formula,
-                CalculatorResult result) {
+                                                  CalculatorResult result) {
             if (mOneLine) {
                 // Disregard result since we set it to GONE in the one-line case.
                 mFormulaTranslationY =
                         mDisplayFormula.getPaddingBottom() - formula.getPaddingBottom()
-                        - mBottomPaddingHeight;
+                                - mBottomPaddingHeight;
             } else {
                 // Baseline of formula moves by the difference in formula bottom padding and the
                 // difference in result height.
@@ -278,7 +275,7 @@ public final class DragController {
         public void initializeResultTranslationY(CalculatorResult result) {
             // Baseline of result moves by the difference in result bottom padding.
             mResultTranslationY = mDisplayResult.getPaddingBottom() - result.getPaddingBottom()
-            - mBottomPaddingHeight;
+                    - mBottomPaddingHeight;
         }
 
         public void initializeResultTranslationX(CalculatorResult result) {
@@ -316,7 +313,7 @@ public final class DragController {
             // Account for the scaled formula height.
             return -mToolbar.getHeight() * (1f - yFraction)
                     + getFormulaTranslationY(yFraction)
-                    - mDisplayFormula.getHeight() /getFormulaScale(yFraction) * (1f - yFraction);
+                    - mDisplayFormula.getHeight() / getFormulaScale(yFraction) * (1f - yFraction);
         }
 
         public float getHistoryElementTranslationY(float yFraction) {
@@ -340,12 +337,12 @@ public final class DragController {
 
         @Override
         public void initializeFormulaTranslationY(AlignedTextView formula,
-                CalculatorResult result) {
+                                                  CalculatorResult result) {
             // Baseline of formula moves by the difference in formula bottom padding and the
             // difference in the result height.
             mFormulaTranslationY = mDisplayFormula.getPaddingBottom() - formula.getPaddingBottom()
-                            + mDisplayResult.getHeight() - result.getHeight()
-                            - mBottomPaddingHeight;
+                    + mDisplayResult.getHeight() - result.getHeight()
+                    - mBottomPaddingHeight;
         }
 
         @Override
@@ -357,7 +354,7 @@ public final class DragController {
         @Override
         public void initializeResultTranslationY(CalculatorResult result) {
             // Baseline of result moves by the difference in result bottom padding.
-            mResultTranslationY =  mDisplayResult.getPaddingBottom() - result.getPaddingBottom()
+            mResultTranslationY = mDisplayResult.getPaddingBottom() - result.getPaddingBottom()
                     - mDisplayResult.getTranslationY()
                     - mBottomPaddingHeight;
         }
@@ -430,7 +427,7 @@ public final class DragController {
 
         @Override
         public void initializeFormulaTranslationY(AlignedTextView formula,
-                CalculatorResult result) {
+                                                  CalculatorResult result) {
             // no-op
         }
 

@@ -51,7 +51,7 @@ public class CalculatorScrollView extends HorizontalScrollView {
 
     @Override
     protected void measureChild(View child, int parentWidthMeasureSpec,
-            int parentHeightMeasureSpec) {
+                                int parentHeightMeasureSpec) {
         // Allow child to be as wide as they want.
         parentWidthMeasureSpec = MeasureSpec.makeMeasureSpec(
                 MeasureSpec.getSize(parentWidthMeasureSpec), UNSPECIFIED);
@@ -67,7 +67,7 @@ public class CalculatorScrollView extends HorizontalScrollView {
 
     @Override
     protected void measureChildWithMargins(View child, int parentWidthMeasureSpec, int widthUsed,
-            int parentHeightMeasureSpec, int heightUsed) {
+                                           int parentHeightMeasureSpec, int heightUsed) {
         // Allow child to be as wide as they want.
         parentWidthMeasureSpec = MeasureSpec.makeMeasureSpec(
                 MeasureSpec.getSize(parentWidthMeasureSpec), UNSPECIFIED);

@@ -18,14 +18,17 @@ package com.android.calculator2;
 
 import android.animation.Animator;
 import android.app.Fragment;
+import android.content.res.Resources;
 import android.os.Bundle;
-import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toolbar;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
@@ -41,6 +44,7 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
     private RecyclerView mRecyclerView;
     private HistoryAdapter mAdapter;
     private DragLayout mDragLayout;
+    private Toolbar mToolbar;
 
     private Evaluator mEvaluator;
 
@@ -56,7 +60,7 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState) {
+                             Bundle savedInstanceState) {
         final View view = inflater.inflate(
                 R.layout.fragment_history, container, false /* attachToRoot */);
 
@@ -66,7 +70,7 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
         mRecyclerView = (RecyclerView) view.findViewById(R.id.history_recycler_view);
         mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
                 if (newState == SCROLL_STATE_DRAGGING) {
                     stopActionModeOrContextMenu();
                 }
@@ -78,28 +82,20 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setAdapter(mAdapter);
 
-        final Toolbar toolbar = (Toolbar) view.findViewById(R.id.history_toolbar);
-        toolbar.inflateMenu(R.menu.fragment_history);
-        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                if (item.getItemId() == R.id.menu_clear_history) {
-                    final Calculator calculator = (Calculator) getActivity();
-                    AlertDialogFragment.showMessageDialog(calculator, "" /* title */,
-                            getString(R.string.dialog_clear),
-                            getString(R.string.menu_clear_history),
-                            CLEAR_DIALOG_TAG);
-                    return true;
-                }
-                return onOptionsItemSelected(item);
+        mToolbar = (Toolbar) view.findViewById(R.id.history_toolbar);
+        mToolbar.inflateMenu(R.menu.fragment_history);
+        mToolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.menu_clear_history) {
+                final Calculator calculator = (Calculator) getActivity();
+                AlertDialogFragment.showMessageDialog(calculator, "" /* title */,
+                        getString(R.string.dialog_clear),
+                        getString(R.string.menu_clear_history),
+                        CLEAR_DIALOG_TAG);
+                return true;
             }
+            return onOptionsItemSelected(item);
         });
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                getActivity().onBackPressed();
-            }
-        });
+        mToolbar.setNavigationOnClickListener(v -> getActivity().onBackPressed());
         return view;
     }
 
@@ -160,11 +156,18 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
         final Calculator activity = (Calculator) getActivity();
         mDragController.initializeAnimation(activity.isResultLayout(), activity.isOneLine(),
                 mIsDisplayEmpty);
+        initMenuIcon();
     }
 
     @Override
     public Animator onCreateAnimator(int transit, boolean enter, int nextAnim) {
         return mDragLayout.createAnimator(enter);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        initMenuIcon();
     }
 
     @Override
@@ -206,6 +209,27 @@ public class HistoryFragment extends Fragment implements DragLayout.DragCallback
             }
         }
         return false;
+    }
+
+    private void initMenuIcon() {
+        int size = mDataSet.size();
+        int id = R.drawable.ic_clear;
+        Resources resources = getResources();
+        MenuItem menuItem = mToolbar.getMenu().getItem(0);
+        if (size >= 2) {
+            menuItem.setEnabled(true);
+        } else {
+            HistoryItem item = mDataSet.get(0);
+            if (item == null) {
+                menuItem.setEnabled(true);
+                menuItem.setIcon(resources.getDrawable(id));
+                return;
+            }
+            boolean isEnable = !item.isEmptyView();
+            menuItem.setEnabled(isEnable);
+            if (!isEnable) id = R.drawable.ic_clear_disabled;
+        }
+        menuItem.setIcon(resources.getDrawable(id));
     }
 
     /* Begin override DragCallback methods. */

@@ -16,11 +16,13 @@
 
 package com.android.calculator2;
 
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -31,15 +33,10 @@ import java.util.List;
  */
 public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
 
-    private static final String TAG = "HistoryAdapter";
-
-    private static final int EMPTY_VIEW_TYPE = 0;
     public static final int HISTORY_VIEW_TYPE = 1;
-
-    private Evaluator mEvaluator;
-
+    private static final int EMPTY_VIEW_TYPE = 0;
     private final Calendar mCalendar = Calendar.getInstance();
-
+    private Evaluator mEvaluator;
     private List<HistoryItem> mDataSet;
 
     private boolean mIsResultLayout;
@@ -51,8 +48,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
         setHasStableIds(true);
     }
 
+    @NonNull
     @Override
-    public HistoryAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public HistoryAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         final View v;
         if (viewType == HISTORY_VIEW_TYPE) {
             v = LayoutInflater.from(parent.getContext())
@@ -65,7 +63,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
     }
 
     @Override
-    public void onBindViewHolder(final HistoryAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull final HistoryAdapter.ViewHolder holder, int position) {
         final HistoryItem item = getItem(position);
 
         if (item.isEmptyView()) {

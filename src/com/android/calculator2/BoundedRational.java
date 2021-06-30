@@ -16,6 +16,8 @@
 
 package com.android.calculator2;
 
+import androidx.annotation.NonNull;
+
 import com.hp.creals.CR;
 
 import java.math.BigInteger;
@@ -28,7 +30,7 @@ import java.util.Random;
  * a maximum size, we simply return null, and rely on our caller do something else.
  * We currently never return null for a pure integer or for a BoundedRational that has just been
  * constructed.
- *
+ * <p>
  * We also implement a number of irrational functions.  These return a non-null result only when
  * the result is known to be rational.
  */
@@ -37,8 +39,20 @@ public class BoundedRational {
     // much faster.
     // TODO: Maybe eventually make this extend Number?
 
+    public final static BoundedRational ZERO = new BoundedRational(0);
+    public final static BoundedRational HALF = new BoundedRational(1, 2);
+    public final static BoundedRational THIRD = new BoundedRational(1, 3);
+    public final static BoundedRational QUARTER = new BoundedRational(1, 4);
+    public final static BoundedRational SIXTH = new BoundedRational(1, 6);
+    public final static BoundedRational ONE = new BoundedRational(1);
+    public final static BoundedRational MINUS_ONE = new BoundedRational(-1);
+    public final static BoundedRational TWO = new BoundedRational(2);
+    public final static BoundedRational TEN = new BoundedRational(10);
+    public final static BoundedRational TWELVE = new BoundedRational(12);
     private static final int MAX_SIZE = 10000; // total, in bits
-
+    private static final BigInteger BIG_MINUS_ONE = BigInteger.valueOf(-1);
+    private static final BigInteger BIG_FIVE = BigInteger.valueOf(5);
+    static Random sReduceRng = new Random();
     private final BigInteger mNum;
     private final BigInteger mDen;
 
@@ -46,6 +60,10 @@ public class BoundedRational {
         mNum = n;
         mDen = d;
     }
+
+    // We use static methods for arithmetic, so that we can easily handle the null case.  We try
+    // to catch domain errors whenever possible, sometimes even when one of the arguments is null,
+    // but not relevant.
 
     public BoundedRational(BigInteger n) {
         mNum = n;
@@ -62,64 +80,191 @@ public class BoundedRational {
         mDen = BigInteger.valueOf(1);
     }
 
-    /**
-     * Produce BoundedRational equal to the given double.
-     */
-    public static BoundedRational valueOf(double x) {
-        final long l = Math.round(x);
-        if ((double) l == x && Math.abs(l) <= 1000) {
-            return valueOf(l);
+    public static String toString(BoundedRational r) {
+        if (r == null) {
+            return "not a small rational";
         }
-        final long allBits = Double.doubleToRawLongBits(Math.abs(x));
-        long mantissa = (allBits & ((1L << 52) - 1));
-        final int biased_exp = (int)(allBits >>> 52);
-        if ((biased_exp & 0x7ff) == 0x7ff) {
-            throw new ArithmeticException("Infinity or NaN not convertible to BoundedRational");
-        }
-        final long sign = x < 0.0 ? -1 : 1;
-        int exp = biased_exp - 1075;  // 1023 + 52; we treat mantissa as integer.
-        if (biased_exp == 0) {
-            exp += 1;  // Denormal exponent is 1 greater.
-        } else {
-            mantissa += (1L << 52);  // Implied leading one.
-        }
-        BigInteger num = BigInteger.valueOf(sign * mantissa);
-        BigInteger den = BigInteger.ONE;
-        if (exp >= 0) {
-            num = num.shiftLeft(exp);
-        } else {
-            den = den.shiftLeft(-exp);
-        }
-        return new BoundedRational(num, den);
+        return r.toString();
     }
 
     /**
-     * Produce BoundedRational equal to the given long.
+     * Return a possibly reduced version of r that's not tooBig().
+     * Return null if none exists.
      */
-    public static BoundedRational valueOf(long x) {
-        if (x >= -2 && x <= 10) {
-            switch((int) x) {
-              case -2:
-                return MINUS_TWO;
-              case -1:
-                return MINUS_ONE;
-              case 0:
-                return ZERO;
-              case 1:
-                return ONE;
-              case 2:
-                return TWO;
-              case 10:
-                return TEN;
-            }
+    private static BoundedRational maybeReduce(BoundedRational r) {
+        if (r == null) return null;
+        // Reduce randomly, with 1/16 probability, or if the result is too big.
+        if (!r.tooBig() && (sReduceRng.nextInt() & 0xf) != 0) {
+            return r;
         }
-        return new BoundedRational(x);
+        BoundedRational result = r.positiveDen();
+        result = result.reduce();
+        if (!result.tooBig()) {
+            return result;
+        }
+        return null;
+    }
+
+    /**
+     * Returns equivalent BigInteger result if it exists, null if not.
+     */
+    public static BigInteger asBigInteger(BoundedRational r) {
+        if (r == null) {
+            return null;
+        }
+        final BigInteger[] quotAndRem = r.mNum.divideAndRemainder(r.mDen);
+        if (quotAndRem[1].signum() == 0) {
+            return quotAndRem[0];
+        } else {
+            return null;
+        }
+    }
+
+    public static BoundedRational add(BoundedRational r1, BoundedRational r2) {
+        if (r1 == null || r2 == null) {
+            return null;
+        }
+        final BigInteger den = r1.mDen.multiply(r2.mDen);
+        final BigInteger num = r1.mNum.multiply(r2.mDen).add(r2.mNum.multiply(r1.mDen));
+        return maybeReduce(new BoundedRational(num, den));
+    }
+
+    /**
+     * Return the argument, but with the opposite sign.
+     * Returns null only for a null argument.
+     */
+    public static BoundedRational negate(BoundedRational r) {
+        if (r == null) {
+            return null;
+        }
+        return new BoundedRational(r.mNum.negate(), r.mDen);
+    }
+
+    public static BoundedRational subtract(BoundedRational r1, BoundedRational r2) {
+        return add(r1, negate(r2));
+    }
+
+    /**
+     * Return product of r1 and r2 without reducing the result.
+     */
+    private static BoundedRational rawMultiply(BoundedRational r1, BoundedRational r2) {
+        // It's tempting but marginally unsound to reduce 0 * null to 0.  The null could represent
+        // an infinite value, for which we failed to throw an exception because it was too big.
+        if (r1 == null || r2 == null) {
+            return null;
+        }
+        // Optimize the case of our special ONE constant, since that's cheap and somewhat frequent.
+        if (r1 == ONE) {
+            return r2;
+        }
+        if (r2 == ONE) {
+            return r1;
+        }
+        final BigInteger num = r1.mNum.multiply(r2.mNum);
+        final BigInteger den = r1.mDen.multiply(r2.mDen);
+        return new BoundedRational(num, den);
+    }
+
+    public static BoundedRational multiply(BoundedRational r1, BoundedRational r2) {
+        return maybeReduce(rawMultiply(r1, r2));
+    }
+
+    /**
+     * Return the reciprocal of r (or null if the argument was null).
+     */
+    public static BoundedRational inverse(BoundedRational r) {
+        if (r == null) {
+            return null;
+        }
+        if (r.mNum.signum() == 0) {
+            throw new ZeroDivisionException();
+        }
+        return new BoundedRational(r.mDen, r.mNum);
+    }
+
+    public static BoundedRational divide(BoundedRational r1, BoundedRational r2) {
+        return multiply(r1, inverse(r2));
+    }
+
+    public static BoundedRational sqrt(BoundedRational r) {
+        // Return non-null if numerator and denominator are small perfect squares.
+        if (r == null) {
+            return null;
+        }
+        r = r.positiveDen().reduce();
+        if (r.mNum.signum() < 0) {
+            throw new ArithmeticException("sqrt(negative)");
+        }
+        final BigInteger num_sqrt = BigInteger.valueOf(Math.round(Math.sqrt(r.mNum.doubleValue())));
+        if (!num_sqrt.multiply(num_sqrt).equals(r.mNum)) {
+            return null;
+        }
+        final BigInteger den_sqrt = BigInteger.valueOf(Math.round(Math.sqrt(r.mDen.doubleValue())));
+        if (!den_sqrt.multiply(den_sqrt).equals(r.mDen)) {
+            return null;
+        }
+        return new BoundedRational(num_sqrt, den_sqrt);
+    }
+
+    public static BoundedRational pow(BoundedRational base, BoundedRational exp) {
+        if (exp == null) {
+            return null;
+        }
+        if (base == null) {
+            return null;
+        }
+        exp = exp.reduce().positiveDen();
+        if (!exp.mDen.equals(BigInteger.ONE)) {
+            return null;
+        }
+        return base.pow(exp.mNum);
+    }
+
+    /**
+     * Return the number of decimal digits to the right of the decimal point required to represent
+     * the argument exactly.
+     * Return Integer.MAX_VALUE if that's not possible.  Never returns a value less than zero, even
+     * if r is a power of ten.
+     */
+    public static int digitsRequired(BoundedRational r) {
+        if (r == null) {
+            return Integer.MAX_VALUE;
+        }
+        int powersOfTwo = 0;  // Max power of 2 that divides denominator
+        int powersOfFive = 0;  // Max power of 5 that divides denominator
+        // Try the easy case first to speed things up.
+        if (r.mDen.equals(BigInteger.ONE)) {
+            return 0;
+        }
+        r = r.reduce();
+        BigInteger den = r.mDen;
+        if (den.bitLength() > MAX_SIZE) {
+            return Integer.MAX_VALUE;
+        }
+        while (!den.testBit(0)) {
+            ++powersOfTwo;
+            den = den.shiftRight(1);
+        }
+        while (den.mod(BIG_FIVE).signum() == 0) {
+            ++powersOfFive;
+            den = den.divide(BIG_FIVE);
+        }
+        // If the denominator has a factor of other than 2 or 5 (the divisors of 10), the decimal
+        // expansion does not terminate.  Multiplying the fraction by any number of powers of 10
+        // will not cancel the demoniator.  (Recall the fraction was in lowest terms to start
+        // with.) Otherwise the powers of 10 we need to cancel the denominator is the larger of
+        // powersOfTwo and powersOfFive.
+        if (!den.equals(BigInteger.ONE) && !den.equals(BIG_MINUS_ONE)) {
+            return Integer.MAX_VALUE;
+        }
+        return Math.max(powersOfTwo, powersOfFive);
     }
 
     /**
      * Convert to String reflecting raw representation.
      * Debug or log messages only, not pretty.
      */
+    @NonNull
     public String toString() {
         return mNum.toString() + "/" + mDen.toString();
     }
@@ -138,16 +283,10 @@ public class BoundedRational {
         return result;
     }
 
-    public static String toString(BoundedRational r) {
-        if (r == null) {
-            return "not a small rational";
-        }
-        return r.toString();
-    }
-
     /**
      * Returns a truncated (rounded towards 0) representation of the result.
      * Includes n digits to the right of the decimal point.
+     *
      * @param n result precision, >= 0
      */
     public String toStringTruncated(int n) {
@@ -205,7 +344,7 @@ public class BoundedRational {
             throw new AssertionError("doubleValue internal error");
         }
         final long mantissa = bigMantissa.longValue();
-        final long bits = (mantissa & ((1l << 52) - 1)) | (((long) exponent + 1023) << 52);
+        final long bits = (mantissa & ((1L << 52) - 1)) | (((long) exponent + 1023) << 52);
         return Double.longBitsToDouble(bits);
     }
 
@@ -264,26 +403,6 @@ public class BoundedRational {
         return new BoundedRational(mNum.divide(divisor), mDen.divide(divisor));
     }
 
-    static Random sReduceRng = new Random();
-
-    /**
-     * Return a possibly reduced version of r that's not tooBig().
-     * Return null if none exists.
-     */
-    private static BoundedRational maybeReduce(BoundedRational r) {
-        if (r == null) return null;
-        // Reduce randomly, with 1/16 probability, or if the result is too big.
-        if (!r.tooBig() && (sReduceRng.nextInt() & 0xf) != 0) {
-            return r;
-        }
-        BoundedRational result = r.positiveDen();
-        result = result.reduce();
-        if (!result.tooBig()) {
-            return result;
-        }
-        return null;
-    }
-
     public int compareTo(BoundedRational r) {
         // Compare by multiplying both sides by denominators, invert result if denominator product
         // was negative.
@@ -304,140 +423,8 @@ public class BoundedRational {
 
     @Override
     public boolean equals(Object r) {
-        return r != null && r instanceof BoundedRational && compareTo((BoundedRational) r) == 0;
+        return r instanceof BoundedRational && compareTo((BoundedRational) r) == 0;
     }
-
-    // We use static methods for arithmetic, so that we can easily handle the null case.  We try
-    // to catch domain errors whenever possible, sometimes even when one of the arguments is null,
-    // but not relevant.
-
-    /**
-     * Returns equivalent BigInteger result if it exists, null if not.
-     */
-    public static BigInteger asBigInteger(BoundedRational r) {
-        if (r == null) {
-            return null;
-        }
-        final BigInteger[] quotAndRem = r.mNum.divideAndRemainder(r.mDen);
-        if (quotAndRem[1].signum() == 0) {
-            return quotAndRem[0];
-        } else {
-            return null;
-        }
-    }
-    public static BoundedRational add(BoundedRational r1, BoundedRational r2) {
-        if (r1 == null || r2 == null) {
-            return null;
-        }
-        final BigInteger den = r1.mDen.multiply(r2.mDen);
-        final BigInteger num = r1.mNum.multiply(r2.mDen).add(r2.mNum.multiply(r1.mDen));
-        return maybeReduce(new BoundedRational(num,den));
-    }
-
-    /**
-     * Return the argument, but with the opposite sign.
-     * Returns null only for a null argument.
-     */
-    public static BoundedRational negate(BoundedRational r) {
-        if (r == null) {
-            return null;
-        }
-        return new BoundedRational(r.mNum.negate(), r.mDen);
-    }
-
-    public static BoundedRational subtract(BoundedRational r1, BoundedRational r2) {
-        return add(r1, negate(r2));
-    }
-
-    /**
-     * Return product of r1 and r2 without reducing the result.
-     */
-    private static BoundedRational rawMultiply(BoundedRational r1, BoundedRational r2) {
-        // It's tempting but marginally unsound to reduce 0 * null to 0.  The null could represent
-        // an infinite value, for which we failed to throw an exception because it was too big.
-        if (r1 == null || r2 == null) {
-            return null;
-        }
-        // Optimize the case of our special ONE constant, since that's cheap and somewhat frequent.
-        if (r1 == ONE) {
-            return r2;
-        }
-        if (r2 == ONE) {
-            return r1;
-        }
-        final BigInteger num = r1.mNum.multiply(r2.mNum);
-        final BigInteger den = r1.mDen.multiply(r2.mDen);
-        return new BoundedRational(num,den);
-    }
-
-    public static BoundedRational multiply(BoundedRational r1, BoundedRational r2) {
-        return maybeReduce(rawMultiply(r1, r2));
-    }
-
-    public static class ZeroDivisionException extends ArithmeticException {
-        public ZeroDivisionException() {
-            super("Division by zero");
-        }
-    }
-
-    /**
-     * Return the reciprocal of r (or null if the argument was null).
-     */
-    public static BoundedRational inverse(BoundedRational r) {
-        if (r == null) {
-            return null;
-        }
-        if (r.mNum.signum() == 0) {
-            throw new ZeroDivisionException();
-        }
-        return new BoundedRational(r.mDen, r.mNum);
-    }
-
-    public static BoundedRational divide(BoundedRational r1, BoundedRational r2) {
-        return multiply(r1, inverse(r2));
-    }
-
-    public static BoundedRational sqrt(BoundedRational r) {
-        // Return non-null if numerator and denominator are small perfect squares.
-        if (r == null) {
-            return null;
-        }
-        r = r.positiveDen().reduce();
-        if (r.mNum.signum() < 0) {
-            throw new ArithmeticException("sqrt(negative)");
-        }
-        final BigInteger num_sqrt = BigInteger.valueOf(Math.round(Math.sqrt(r.mNum.doubleValue())));
-        if (!num_sqrt.multiply(num_sqrt).equals(r.mNum)) {
-            return null;
-        }
-        final BigInteger den_sqrt = BigInteger.valueOf(Math.round(Math.sqrt(r.mDen.doubleValue())));
-        if (!den_sqrt.multiply(den_sqrt).equals(r.mDen)) {
-            return null;
-        }
-        return new BoundedRational(num_sqrt, den_sqrt);
-    }
-
-    public final static BoundedRational ZERO = new BoundedRational(0);
-    public final static BoundedRational HALF = new BoundedRational(1,2);
-    public final static BoundedRational MINUS_HALF = new BoundedRational(-1,2);
-    public final static BoundedRational THIRD = new BoundedRational(1,3);
-    public final static BoundedRational QUARTER = new BoundedRational(1,4);
-    public final static BoundedRational SIXTH = new BoundedRational(1,6);
-    public final static BoundedRational ONE = new BoundedRational(1);
-    public final static BoundedRational MINUS_ONE = new BoundedRational(-1);
-    public final static BoundedRational TWO = new BoundedRational(2);
-    public final static BoundedRational MINUS_TWO = new BoundedRational(-2);
-    public final static BoundedRational TEN = new BoundedRational(10);
-    public final static BoundedRational TWELVE = new BoundedRational(12);
-    public final static BoundedRational THIRTY = new BoundedRational(30);
-    public final static BoundedRational MINUS_THIRTY = new BoundedRational(-30);
-    public final static BoundedRational FORTY_FIVE = new BoundedRational(45);
-    public final static BoundedRational MINUS_FORTY_FIVE = new BoundedRational(-45);
-    public final static BoundedRational NINETY = new BoundedRational(90);
-    public final static BoundedRational MINUS_NINETY = new BoundedRational(-90);
-
-    private static final BigInteger BIG_TWO = BigInteger.valueOf(2);
-    private static final BigInteger BIG_MINUS_ONE = BigInteger.valueOf(-1);
 
     /**
      * Compute integral power of this, assuming this has been reduced and exp is >= 0.
@@ -505,60 +492,9 @@ public class BoundedRational {
         }
     }
 
-    public static BoundedRational pow(BoundedRational base, BoundedRational exp) {
-        if (exp == null) {
-            return null;
+    public static class ZeroDivisionException extends ArithmeticException {
+        public ZeroDivisionException() {
+            super("Division by zero");
         }
-        if (base == null) {
-            return null;
-        }
-        exp = exp.reduce().positiveDen();
-        if (!exp.mDen.equals(BigInteger.ONE)) {
-            return null;
-        }
-        return base.pow(exp.mNum);
-    }
-
-
-    private static final BigInteger BIG_FIVE = BigInteger.valueOf(5);
-
-    /**
-     * Return the number of decimal digits to the right of the decimal point required to represent
-     * the argument exactly.
-     * Return Integer.MAX_VALUE if that's not possible.  Never returns a value less than zero, even
-     * if r is a power of ten.
-     */
-    public static int digitsRequired(BoundedRational r) {
-        if (r == null) {
-            return Integer.MAX_VALUE;
-        }
-        int powersOfTwo = 0;  // Max power of 2 that divides denominator
-        int powersOfFive = 0;  // Max power of 5 that divides denominator
-        // Try the easy case first to speed things up.
-        if (r.mDen.equals(BigInteger.ONE)) {
-            return 0;
-        }
-        r = r.reduce();
-        BigInteger den = r.mDen;
-        if (den.bitLength() > MAX_SIZE) {
-            return Integer.MAX_VALUE;
-        }
-        while (!den.testBit(0)) {
-            ++powersOfTwo;
-            den = den.shiftRight(1);
-        }
-        while (den.mod(BIG_FIVE).signum() == 0) {
-            ++powersOfFive;
-            den = den.divide(BIG_FIVE);
-        }
-        // If the denominator has a factor of other than 2 or 5 (the divisors of 10), the decimal
-        // expansion does not terminate.  Multiplying the fraction by any number of powers of 10
-        // will not cancel the demoniator.  (Recall the fraction was in lowest terms to start
-        // with.) Otherwise the powers of 10 we need to cancel the denominator is the larger of
-        // powersOfTwo and powersOfFive.
-        if (!den.equals(BigInteger.ONE) && !den.equals(BIG_MINUS_ONE)) {
-            return Integer.MAX_VALUE;
-        }
-        return Math.max(powersOfTwo, powersOfFive);
     }
 }

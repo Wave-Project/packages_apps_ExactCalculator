@@ -23,20 +23,25 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
-import androidx.core.view.ViewCompat;
-import androidx.customview.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.core.view.ViewCompat;
+import androidx.customview.widget.ViewDragHelper;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class DragLayout extends ViewGroup {
@@ -44,18 +49,14 @@ public class DragLayout extends ViewGroup {
     private static final double AUTO_OPEN_SPEED_LIMIT = 600.0;
     private static final String KEY_IS_OPEN = "IS_OPEN";
     private static final String KEY_SUPER_STATE = "SUPER_STATE";
-
-    private FrameLayout mHistoryFrame;
-    private ViewDragHelper mDragHelper;
-
     // No concurrency; allow modifications while iterating.
     private final List<DragCallback> mDragCallbacks = new CopyOnWriteArrayList<>();
-    private CloseCallback mCloseCallback;
-
     private final Map<Integer, PointF> mLastMotionPoints = new HashMap<>();
     private final Rect mHitRect = new Rect();
     private final List<Rect> mExclusionRects = new ArrayList<>();
-
+    private FrameLayout mHistoryFrame;
+    private ViewDragHelper mDragHelper;
+    private CloseCallback mCloseCallback;
     private int mVerticalRange;
     private boolean mIsOpen;
 
@@ -76,6 +77,7 @@ public class DragLayout extends ViewGroup {
         measureChildren(widthMeasureSpec, heightMeasureSpec);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int displayHeight = 0;
@@ -105,6 +107,7 @@ public class DragLayout extends ViewGroup {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -262,6 +265,7 @@ public class DragLayout extends ViewGroup {
         mDragCallbacks.remove(callback);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     private void updateExclusionRects() {
         mExclusionRects.add(0, mHitRect);
         setSystemGestureExclusionRects(mExclusionRects);
@@ -302,13 +306,13 @@ public class DragLayout extends ViewGroup {
         public void onViewDragStateChanged(int state) {
             // The view stopped moving.
             if (state == ViewDragHelper.STATE_IDLE
-                    && mDragHelper.getCapturedView().getTop() < -(mVerticalRange / 2)) {
+                    && Objects.requireNonNull(mDragHelper.getCapturedView()).getTop() < -(mVerticalRange / 2)) {
                 setClosed();
             }
         }
 
         @Override
-        public void onViewPositionChanged(View changedView, int left, int top, int dx, int dy) {
+        public void onViewPositionChanged(@NonNull View changedView, int left, int top, int dx, int dy) {
             for (DragCallback c : mDragCallbacks) {
                 // Top is between [-mVerticalRange, 0].
                 c.whileDragging(1f + (float) top / mVerticalRange);
@@ -316,12 +320,12 @@ public class DragLayout extends ViewGroup {
         }
 
         @Override
-        public int getViewVerticalDragRange(View child) {
+        public int getViewVerticalDragRange(@NonNull View child) {
             return mVerticalRange;
         }
 
         @Override
-        public boolean tryCaptureView(View view, int pointerId) {
+        public boolean tryCaptureView(@NonNull View view, int pointerId) {
             final PointF point = mLastMotionPoints.get(pointerId);
             if (point == null) {
                 return false;
@@ -339,12 +343,12 @@ public class DragLayout extends ViewGroup {
         }
 
         @Override
-        public int clampViewPositionVertical(View child, int top, int dy) {
+        public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
             return Math.max(Math.min(top, 0), -mVerticalRange);
         }
 
         @Override
-        public void onViewCaptured(View capturedChild, int activePointerId) {
+        public void onViewCaptured(@NonNull View capturedChild, int activePointerId) {
             super.onViewCaptured(capturedChild, activePointerId);
 
             if (!mIsOpen) {
@@ -354,7 +358,7 @@ public class DragLayout extends ViewGroup {
         }
 
         @Override
-        public void onViewReleased(View releasedChild, float xvel, float yvel) {
+        public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
             final boolean settleToOpen;
             if (yvel > AUTO_OPEN_SPEED_LIMIT) {
                 // Speed has priority over position.

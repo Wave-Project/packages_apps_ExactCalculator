@@ -40,7 +40,10 @@ public class CalculatorDisplay extends LinearLayout
      * The duration in milliseconds to fade in/out the toolbar.
      */
     private static final long FADE_DURATION = 200L;
-
+    private final AccessibilityManager mAccessibilityManager;
+    private final GestureDetector mTapDetector;
+    private Toolbar mToolbar;
+    private Transition mTransition;
     private final Runnable mHideToolbarRunnable = new Runnable() {
         @Override
         public void run() {
@@ -51,16 +54,8 @@ public class CalculatorDisplay extends LinearLayout
             if (isLaidOut()) {
                 TransitionManager.beginDelayedTransition(CalculatorDisplay.this, mTransition);
             }
-            mToolbar.setVisibility(View.INVISIBLE);
         }
     };
-
-    private final AccessibilityManager mAccessibilityManager;
-    private final GestureDetector mTapDetector;
-
-    private Toolbar mToolbar;
-    private Transition mTransition;
-
     private boolean mForceToolbarVisible;
 
     public CalculatorDisplay(Context context) {
@@ -168,6 +163,7 @@ public class CalculatorDisplay extends LinearLayout
 
     /**
      * Shows the toolbar.
+     *
      * @param autoHide Automatically ide toolbar again after delay
      */
     public void showToolbar(boolean autoHide) {

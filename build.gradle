@@ -21,7 +21,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.1'
+        classpath 'com.android.tools.build:gradle:4.2.2'
     }
 }
 apply plugin: "com.android.application"
@@ -60,4 +60,5 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation "androidx.annotation:annotation:1.2.0"
+    implementation 'androidx.cardview:cardview:1.0.0'
 }
