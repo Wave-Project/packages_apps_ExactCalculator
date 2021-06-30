@@ -16,13 +16,11 @@
 
 package com.android.calculator2;
 
-import android.widget.Button;
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.View;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
+import android.widget.Button;
 
 /**
  * A basic Button that vibrates on finger down.
@@ -30,35 +28,25 @@ import android.view.HapticFeedbackConstants;
 public class HapticButton extends Button {
     public HapticButton(Context context) {
         super(context);
-        initVibration(context);
+        initVibration();
     }
 
     public HapticButton(Context context, AttributeSet attrs) {
         super(context, attrs);
-        initVibration(context);
+        initVibration();
     }
 
     public HapticButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        initVibration(context);
+        initVibration();
     }
 
-    public HapticButton(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-        initVibration(context);
-    }
-
-    private void initVibration(Context context) {
-        setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-                }
-
-                // Passthrough
-                return false;
+    private void initVibration() {
+        setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
             }
+            return false;
         });
     }
 }
