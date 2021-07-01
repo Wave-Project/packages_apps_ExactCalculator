@@ -15,16 +15,19 @@
  */
 
 buildscript {
+    ext.kotlin_version = '1.5.20'
     repositories {
         mavenCentral()
         google()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.1'
+        classpath 'com.android.tools.build:gradle:4.2.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 apply plugin: "com.android.application"
+apply plugin: 'kotlin-android'
 
 android {
 
@@ -60,4 +63,6 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation "androidx.annotation:annotation:1.2.0"
+    implementation "androidx.core:core-ktx:1.6.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
